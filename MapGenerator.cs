@@ -81,21 +81,17 @@ namespace BlockyMapGen {
         [Button]
         void flushOpeningConnections() {
             var openings = _blocks.SelectMany( b => b.openings ).ToList();
-            for (var i = 0; i < openings.Count; i++) {
-                bool connectionFound = false;
+            openings.ForEach( o => o.connectedOpening = null );
+            for (var i = 0; i < openings.Count - 1; i++) {
                 for (var j = i + 1; j < openings.Count; j++) {
                     if (!openings[i].CanConnectTo(openings[j])) continue;
                     var dist = (openings[i].transform.position - openings[j].transform.position).sqrMagnitude;
                     if (dist > 0.1f) continue;
                     openings[i].connectedOpening = openings[j];
                     openings[j].connectedOpening = openings[i];
-                    connectionFound = true;
                     break;
                 }
-
-                if (!connectionFound) {
-                    openings[i].connectedOpening = null;
-                }
+                openings[i].UpdateView();
             }
         }
 

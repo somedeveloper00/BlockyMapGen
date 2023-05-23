@@ -6,7 +6,6 @@ using UnityEngine;
 namespace BlockyMapGen {
     public class Opening : MonoBehaviour {
         public Block fromBlock;
-        public bool open;
         public GameObject openContainer, closeContainer;
         [SerializeField] OpeningType type;
         [SerializeField] int specialId;
@@ -15,11 +14,11 @@ namespace BlockyMapGen {
         [NonSerialized, ShowInInspector, ReadOnly]
         public Opening connectedOpening;
 
-        void Start() => updateView();
+        void Start() => UpdateView();
 
-        void updateView() {
-            if (openContainer)  openContainer.SetActive( open );
-            if (closeContainer) closeContainer.SetActive( !open );
+        public void UpdateView() {
+            if (openContainer)  openContainer.SetActive( connectedOpening );
+            if (closeContainer) closeContainer.SetActive( !connectedOpening );
         }
 
         public bool CanConnectTo(Opening other) => other.type == type && !blockIds.Contains( other.specialId );
