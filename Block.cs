@@ -1,18 +1,14 @@
-using System;
 using AnimFlex.Sequencer;
 using UnityEditor;
 using UnityEngine;
 
 namespace BlockyMapGen {
     public class Block : MonoBehaviour {
-        public Opening[] openings;
         public Bounds bounds;
         [SerializeField] SequenceAnim activateSeq, deactivateSeq;
-
-        [NonSerialized] public bool passed = false;
-        bool _active = false;
-
-        public bool ContainsTarget { get; private set; } = false;
+        
+        public bool TargetInside { get; private set; }
+        public bool TargetPassed { get; private set; }
 
         void OnDrawGizmos() {
             Handles.color = Color.blue;
@@ -20,52 +16,22 @@ namespace BlockyMapGen {
         }
 
         public void Tick(MapTarget mapTarget) {
-            if (activateSeq.sequence.IsPlaying() || deactivateSeq.sequence.IsPlaying()) return;
-            
-            if (!passed) {
-                ContainsTarget = containsPoint( mapTarget.GetPoint() );
-                if (_active == ContainsTarget) return;
-                if (ContainsTarget) {
-#if UNITY_EDITOR
-                    if (Application.isPlaying)
-                        activateSeq.PlaySequence();
-#else
-                    activateSeq.PlaySequence();
-#endif
-                }
-                else {
-                    ContainsTarget = false;
-#if UNITY_EDITOR
-                    if (Application.isPlaying) {
-                        deactivateSeq.PlaySequence();
-                        deactivateSeq.sequence.onComplete += () => passed = true;
-                    }
-                    else {
-                        passed = true;
-                    }
-#else
+            if (TargetPassed) return;
+            if (TargetInside) {
+                if (!new Bounds( transform.TransformPoint( bounds.center ), bounds.size ).Contains( mapTarget.GetPoint() )) {
+                    TargetPassed = true;
+                    activateSeq.StopSequence();
                     deactivateSeq.PlaySequence();
-                    deactivateSeq.sequence.onComplete += () => passed = true;
-#endif
+                    Debug.Log( $"block {name} deactivated".Color( Color.red ), this );
                 }
-                _active = ContainsTarget;
+                return;
             }
-            else {
-                var cbound = new Bounds( transform.TransformPoint( bounds.center ), bounds.size );
-                if (!mapTarget.IsInHotSpot( cbound )) {
-                    Destroy( gameObject );
-                    Debug.Log( $"destroyed {name}".Color( Color.red ) );
-                }
+
+            if (new Bounds( transform.TransformPoint( bounds.center ), bounds.size ).Contains( mapTarget.GetPoint() )) {
+                TargetInside = true;
+                activateSeq.PlaySequence();
+                Debug.Log( $"block {name} activated".Color( Color.green ), this );
             }
-        }
-
-        bool containsPoint(Vector3 point) => bounds.Contains( transform.InverseTransformPoint( point ) );
-
-
-        public bool WillIntersectWithPrefabAtPos(Block prefab, Vector3 pos) {
-            var bound1 = new Bounds( transform.TransformPoint( bounds.center ), bounds.size );
-            var bound2 = new Bounds( prefab.bounds.center + pos, prefab.bounds.size );
-            return bound1.Intersects( bound2 ) || bound1 == bound2;
         }
     }
 }
