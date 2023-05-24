@@ -7,6 +7,7 @@ using UnityEngine;
 namespace BlockyMapGen {
     public class MapGenerator : MonoBehaviour {
         [SerializeField] MapTarget target;
+        [SerializeField] int maxUnpassedBlocks = 5;
         [SerializeField] BlockSpawn[] spawnableBlockPrefabs;
         [SerializeField] BlockSpawn[] startingBlockPrefabs;
         [SerializeField] int updateDelayFrames = 5;
@@ -18,66 +19,95 @@ namespace BlockyMapGen {
 
         [Button]
         public void ResetMap() {
-            foreach (var block in GetComponentsInChildren<Block>()) safeDestroy( block.gameObject );
+            _blocks.ForEach( b => safeDestroy( b ? b.gameObject : null ) );
             _blocks.Clear();
-            _blocks.Add( Instantiate( startingBlockPrefabs.Random( s => s.chance ).prefab, transform ) );
+            foreach (var b in GetComponentsInChildren<Block>()) safeDestroy( b.gameObject );
+            _blocks.Add( Instantiate( startingBlockPrefabs.Random( s => s.chance ).prefab, target.GetPoint(), Quaternion.identity, transform ) );
         }
 
         void Start() {
-            _blocks.Clear();
-            _blocks.AddRange( GetComponentsInChildren<Block>() );
+            ResetMap();
             flushOpeningConnections();
-            updateBlockNames();
         }
 
         [Button]
         void Update() {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) {
+                updateBlocks();
+                flushOpeningConnections();
+                return;
+            }
+#endif
             if (Time.frameCount - _lastUpdateFrame > updateDelayFrames) {
                 _lastUpdateFrame = Time.frameCount;
                 if (updateBlocks()) {
                     flushOpeningConnections();
+                    destroyIsolatedBlocks();
                     updateBlockNames();
                 }
             }
         }
 
         bool updateBlocks() {
-            bool changed = false;
+            var point = target.GetPoint();
+            var changed = false;
+
+            int notPassedCount = _blocks.Count( b => !b.passed );
+                
             for (int i = 0; i < _blocks.Count; i++) {
-                var block = _blocks[i];
+                _blocks[i].Tick( target );
+                if ( !_blocks[i] || !_blocks[i].enabled) {
+                    _blocks.RemoveAt( i-- );
+                    continue;
+                }
                 
-                bool anyOpeningInside = false;
+                if (notPassedCount >= maxUnpassedBlocks) continue;
                 
-                // check for adding neighbors
-                for (int j = 0; j < block.openings.Length; j++) {
-                    var opening = block.openings[j];
-                    
-                    var inside = target.IsInsideTargetView( opening.transform.position );
-                    if (!inside) continue;
-                    anyOpeningInside = true;
-                    
+                // adding new blocks
+                foreach (var opening in _blocks[i].openings) {
                     if (opening.connectedOpening) continue;
-                    
-                    // spawn new block here
-                    var nblock = spawnBlock( opening.transform.position, opening );
-                    if (nblock) {
-                        _blocks.Add( nblock );
-                        nblock.name = "block " + i + "-" + j;
+                    if (Vector3.Dot( opening.transform.position - point, target.GetDirection() ) < 0) continue;
+                    var nBlock = spawnBlock( opening.transform.position, opening );
+                    if (nBlock) {
+                        _blocks.Add( nBlock );
+                        notPassedCount++;
                         changed = true;
                     }
-                }
-                
-                // check for deletion
-                if (!anyOpeningInside) {
-                    safeDestroy( _blocks[i].gameObject );
-                    _blocks.RemoveAt( i-- );
-                    changed = true;
+                    
+                    if (notPassedCount >= maxUnpassedBlocks) continue;
                 }
             }
-
+            
             return changed;
         }
 
+        bool destroyIsolatedBlocks() {
+            var visited = new List<Block>();
+            var check = new List<Block>();
+            check.Add( _blocks.Find( b => b.ContainsTarget ) );
+            while (check.Count > 0) {
+                if (check[0] is null) break;
+                visited.Add( check[0] );
+                foreach (var opening in check[0].openings) {
+                    if (!opening.connectedOpening) continue;
+                    if (!visited.Contains( opening.connectedOpening.fromBlock ) ) {
+                        check.Add( opening.connectedOpening.fromBlock );
+                    }
+                }
+                check.RemoveAt( 0 );
+            }
+
+            for (var i = 0; i < _blocks.Count; i++) {
+                if (!visited.Contains( _blocks[i] )) {
+                    safeDestroy( _blocks[i].gameObject );
+                    _blocks.RemoveAt( i-- );
+                }
+            }
+
+            return visited.Count == 0;
+        }
+        
         [Button]
         void flushOpeningConnections() {
             var openings = _blocks.SelectMany( b => b.openings ).ToList();
@@ -96,9 +126,7 @@ namespace BlockyMapGen {
         }
 
         void updateBlockNames() {
-            for (int i = 0; i < _blocks.Count; i++) {
-                _blocks[i].name = $"block {i}";
-            }
+            for (int i = 0; i < _blocks.Count; i++) _blocks[i].name = $"Block {i}";
         }
 
         void safeDestroy(GameObject go) {

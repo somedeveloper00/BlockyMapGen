@@ -17,7 +17,7 @@ namespace BlockyMapGen {
         void Start() => UpdateView();
 
         public void UpdateView() {
-            if (openContainer)  openContainer.SetActive( connectedOpening );
+            if (openContainer)  {openContainer.SetActive( connectedOpening );}
             if (closeContainer) closeContainer.SetActive( !connectedOpening );
         }
 
