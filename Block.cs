@@ -15,8 +15,8 @@ namespace BlockyMapGen {
             Handles.DrawWireCube( transform.TransformPoint( bounds.center ), bounds.size );
         }
 
-        public void Tick(MapTarget mapTarget) {
-            if (TargetPassed) return;
+        public bool Tick(MapTarget mapTarget) {
+            if (TargetPassed) return false;
             if (TargetInside) {
                 if (!new Bounds( transform.TransformPoint( bounds.center ), bounds.size ).Contains( mapTarget.GetPoint() )) {
                     TargetPassed = true;
@@ -24,14 +24,17 @@ namespace BlockyMapGen {
                     deactivateSeq.PlaySequence();
                     Debug.Log( $"block {name} deactivated".Color( Color.red ), this );
                 }
-                return;
+                return false;
             }
 
             if (new Bounds( transform.TransformPoint( bounds.center ), bounds.size ).Contains( mapTarget.GetPoint() )) {
                 TargetInside = true;
                 activateSeq.PlaySequence();
                 Debug.Log( $"block {name} activated".Color( Color.green ), this );
+                return true;
             }
+
+            return false;
         }
     }
 }

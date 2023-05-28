@@ -15,6 +15,7 @@ namespace BlockyMapGen {
         [SerializeField] Bounds bounds;
 
         public Bounds WorldBounds { get; private set; }
+        public event Action<Block> onMapTargetReachBlock;
         bool _ended;
 
 #if UNITY_EDITOR
@@ -61,7 +62,9 @@ namespace BlockyMapGen {
 
 
         public bool Tick(MapTarget mapTarget, out (Vector3 pos, ConnectionType type)? nextPoint) {
-            foreach (var block in blocks) block.Tick( mapTarget );
+            foreach (var block in blocks)
+                if (block.Tick( mapTarget ))
+                    onMapTargetReachBlock?.Invoke( block );
 
             if (_ended) {
                 nextPoint = null;

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace BlockyMapGen {
     public class MapGenerator : MonoBehaviour {
-        [SerializeField] MapTarget target;
+        public MapTarget target;
         [SerializeField] ChunkSpawn[] chunkSpawns;
         [SerializeField] Chunk startingChunk;
         [SerializeField] float updateInterval = 0.1f;
@@ -15,12 +15,17 @@ namespace BlockyMapGen {
         [ShowInInspector, ReadOnly] readonly List<Chunk> _endedChunks = new();
         float _lastUpdateTime = -1;
         
+        public event Action<Block> onBlockReached; 
+
         [Button]
         public void ResetMap() {
             foreach (var chunk in GetComponentsInChildren<Chunk>())
                 if (chunk != startingChunk) safeDestroy( chunk.gameObject );
             _chunks.Clear();
             _chunks.Add( startingChunk );
+            
+            startingChunk.onMapTargetReachBlock -= onBlockReached;
+            startingChunk.onMapTargetReachBlock += onBlockReached;
         }
 
         void Start() => ResetMap();
@@ -41,7 +46,7 @@ namespace BlockyMapGen {
             List<(Vector3 pos, Chunk.ConnectionType type)> npoint = new();
             for (var i = 0; i < _chunks.Count; i++) {
                 if (_chunks[i].Tick( target, out var nextPoint )) {
-                    npoint.Add( nextPoint.Value );
+                    npoint.Add( nextPoint!.Value );
                     _endedChunks.Add( _chunks[i] );
                     _chunks.RemoveAt( i-- );
                 }
@@ -87,6 +92,7 @@ namespace BlockyMapGen {
 
         Chunk instantiateChunk(Chunk chunk, Vector3 pos) {
             var c = Instantiate( chunk, pos, Quaternion.identity, transform );
+            c.onMapTargetReachBlock += onBlockReached;
             _chunks.Add( c );
             return c;
         }
