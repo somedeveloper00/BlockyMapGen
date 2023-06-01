@@ -59,8 +59,7 @@ namespace BlockyMapGen {
         public enum ConnectionType {
             AlongX, AlongZ
         }
-
-
+        
         public bool Tick(MapTarget mapTarget, out (Vector3 pos, ConnectionType type)? nextPoint) {
             foreach (var block in blocks)
                 if (block.Tick( mapTarget ))

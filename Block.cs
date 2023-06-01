@@ -1,6 +1,9 @@
 using AnimFlex.Sequencer;
-using UnityEditor;
 using UnityEngine;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace BlockyMapGen {
     public class Block : MonoBehaviour {
@@ -10,10 +13,12 @@ namespace BlockyMapGen {
         public bool TargetInside { get; private set; }
         public bool TargetPassed { get; private set; }
 
+#if UNITY_EDITOR
         void OnDrawGizmos() {
             Handles.color = Color.blue;
             Handles.DrawWireCube( transform.TransformPoint( bounds.center ), bounds.size );
         }
+#endif
 
         public bool Tick(MapTarget mapTarget) {
             if (TargetPassed) return false;

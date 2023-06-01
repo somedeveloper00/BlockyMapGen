@@ -21,8 +21,10 @@ namespace BlockyMapGen {
         public void ResetMap() {
             foreach (var chunk in GetComponentsInChildren<Chunk>())
                 if (chunk != startingChunk) safeDestroy( chunk.gameObject );
+
+            startingChunk.gameObject.SetActive( false );
             _chunks.Clear();
-            _chunks.Add( startingChunk );
+            _chunks.Add( instantiateChunk( startingChunk, Vector3.zero ) );
             
             startingChunk.onMapTargetReachBlock -= onBlockReached;
             startingChunk.onMapTargetReachBlock += onBlockReached;
@@ -93,6 +95,7 @@ namespace BlockyMapGen {
         Chunk instantiateChunk(Chunk chunk, Vector3 pos) {
             var c = Instantiate( chunk, pos, Quaternion.identity, transform );
             c.onMapTargetReachBlock += onBlockReached;
+            c.gameObject.SetActive( true );
             _chunks.Add( c );
             return c;
         }
