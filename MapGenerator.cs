@@ -10,6 +10,7 @@ namespace BlockyMapGen {
         [SerializeField] ChunkSpawn[] chunkSpawns;
         [SerializeField] Chunk startingChunk;
         [SerializeField] float updateInterval = 0.1f;
+        [SerializeField] BlockyMapGenTime time;
 
         [ShowInInspector, ReadOnly] readonly List<Chunk> _chunks = new();
         [ShowInInspector, ReadOnly] readonly List<Chunk> _endedChunks = new();
@@ -22,8 +23,9 @@ namespace BlockyMapGen {
             foreach (var chunk in GetComponentsInChildren<Chunk>())
                 if (chunk != startingChunk) safeDestroy( chunk.gameObject );
 
-            startingChunk.gameObject.SetActive( false );
+            _endedChunks.Clear();
             _chunks.Clear();
+            startingChunk.gameObject.SetActive( false );
             _chunks.Add( instantiateChunk( startingChunk, Vector3.zero ) );
             
             startingChunk.onMapTargetReachBlock -= onBlockReached;
@@ -34,7 +36,7 @@ namespace BlockyMapGen {
 
         [Button]
         void Update() {
-            bool shouldUpdateChunkInstances = Time.time - _lastUpdateTime >= updateInterval;
+            bool shouldUpdateChunkInstances = time.Time - _lastUpdateTime >= updateInterval;
 #if UNITY_EDITOR
             shouldUpdateChunkInstances |= !Application.isPlaying; 
 #endif
@@ -73,11 +75,11 @@ namespace BlockyMapGen {
 
         Chunk getRandomChunk(Chunk.ConnectionType connectionType) => chunkSpawns
             .Where( c => c.chunk.connectionType == connectionType )
-            .Random( c => c.chance.Evaluate( Time.time ) ).chunk;
+            .Random( c => c.chance.Evaluate( time.Time ) ).chunk;
 
         void updateChunkNames() {
             for (int i = 0; i < _chunks.Count; i++) {
-                _chunks[i].name = $"chunk {i}";
+                if (_chunks[i]) _chunks[i].name = $"chunk {i}";
             }
         }
 

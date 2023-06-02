@@ -9,8 +9,12 @@ namespace BlockyMapGen {
         [SerializeField] bool spawnOnEnable = true;
         [SerializeField] float dontSpawnUntilTime = 1;
 
+        BlockyMapGenTime _time;
+
         void OnEnable() {
-            if (spawnOnEnable && Time.time > dontSpawnUntilTime) SpawnRandom( Time.time );
+            _time = gameObject.GetRootGameObject().GetComponent<BlockyMapGenTime>();
+            if (_time == null) throw new Exception("BlockyMapGenTime not found");
+            if (spawnOnEnable && _time.Time > dontSpawnUntilTime) SpawnRandom( _time.Time );
         }
 
         public void SpawnRandom(float time) {
